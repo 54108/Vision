@@ -1,0 +1,14 @@
+.vscode
+build
+CMakeCache.txt
+.cache
+Makefile
+*.make
+*.cmake
+*.so
+*.d
+*.o
+CMakeFiles
+Vision
+Camera/Data
+Camera/log
