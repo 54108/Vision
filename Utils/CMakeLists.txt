@@ -7,5 +7,5 @@ include_directories(${EIGEN3_INCLUDE_DIR})
 
 file(GLOB_RECURSE src *.cpp)
 
-add_library(utils OBJECT ${src})
-target_link_libraries(utils fmt::fmt ${OpenCV_LIBS})
+add_library(Utils OBJECT ${src})
+target_link_libraries(Utils fmt::fmt ${OpenCV_LIBS})

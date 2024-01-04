@@ -6,4 +6,4 @@ file(GLOB_RECURSE src *.cpp)
 include_directories( ${OpenCV_INCLUDE_DIRS} )
 
 add_library(Serial OBJECT ${src})
-target_link_libraries(Serial fmt::fmt ${Opencv_DIR})
+target_link_libraries(Serial fmt::fmt ${Opencv_LIBS})

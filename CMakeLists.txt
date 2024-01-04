@@ -21,14 +21,15 @@ else ()
     add_compile_options(-O0 -g)
 endif ()
 
-include_directories(UltraMultiThread/include)
+include_directories(/usr/include/ie/)
+INCLUDE_DIRECTORIES(${InferenceEngine_INCLUDE_DIRS})
 
 add_executable(Vision main.cpp)
 target_link_libraries(Vision)
 
-include_directories(utils)
-add_subdirectory(utils)
-target_link_libraries(Vision utils)
+include_directories(Utils)
+add_subdirectory(Utils)
+target_link_libraries(Vision Utils)
 
 include_directories(Serial)
 add_subdirectory(Serial)
@@ -38,9 +39,9 @@ include_directories(Camera)
 add_subdirectory(Camera)
 target_link_libraries(Vision Camera)
 
-# include_directories(autoaim)
-# add_subdirectory(autoaim)
-# target_link_libraries(CVRM2021 autoaim)
+include_directories(Detector)
+add_subdirectory(Detector)
+target_link_libraries(Vision Detector)
 
 # include_directories(record)
 # add_subdirectory(record)
