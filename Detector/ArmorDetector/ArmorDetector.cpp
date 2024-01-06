@@ -473,3 +473,4 @@ int ArmorDetector::isFindTarget()
 {
     return isFindArmor;
 }
+

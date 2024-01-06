@@ -31,6 +31,10 @@ class FPS
     {
         return time * 1000;
     }
+    double getpfs()
+    {
+        return fps;
+    }
 
   private:
     void displayFPS() const

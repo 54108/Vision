@@ -1,19 +1,19 @@
 #ifndef YOLOXARMOR_INFERENCE_H
 #define YOLOXARMOR_INFERENCE_H
 
+#include "../../Utils/general.hpp"
+#include "../OpenVINO2022/openvino_detector.hpp"
+#include <Eigen/Core>
+#include <ie/cpp/ie_cnn_network.h>
 #include <iostream>
 #include <iterator>
 #include <memory>
+#include <opencv2/opencv.hpp>
+#include <openvino/openvino.hpp>
 #include <openvino/runtime/compiled_model.hpp>
 #include <openvino/runtime/tensor.hpp>
 #include <string>
 #include <vector>
-
-#include "../../Utils/general.hpp"
-#include <Eigen/Core>
-#include <ie/cpp/ie_cnn_network.h>
-#include <opencv2/opencv.hpp>
-#include <openvino/openvino.hpp>
 
 using namespace std;
 using namespace cv;
@@ -51,7 +51,6 @@ class ArmorDetector
     void display(Mat &image2show, ArmorObject object);
     bool initModel(string path);
     int getArmorType();
-
     int isFindTarget();
 
     ArmorState state = LOST;
@@ -64,6 +63,7 @@ class ArmorDetector
     ov::InferRequest infer_request;   // 推理请求
     // ArmorState state;
     ArmorObject armor_object;
+    cv::Point2f last_armor_center;
 
     Eigen::Matrix<float, 3, 3> transfrom_matrix;
 };
