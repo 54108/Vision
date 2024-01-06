@@ -32,7 +32,7 @@
 #include <openvino/openvino.hpp>
 
 #include "types.hpp"
-#include "../../utils/general.hpp"
+#include "../../Utils/general.hpp"
 
 namespace rm_auto_aim
 {

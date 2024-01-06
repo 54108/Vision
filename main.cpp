@@ -1,14 +1,17 @@
 #include "Camera/MVCamera.hpp"
 #include "Detector/ArmorDetector/ArmorDetector.hpp"
 #include "Utils/fps.hpp"
+#include <openvino/runtime/properties.hpp>
+#include "Utils/general.hpp"
+
 
 using namespace std;
 using namespace cv;
 using namespace mindvision;
 
+
 int main()
 {
-
     mindvision::MVCamera *mv_capture_ = new mindvision::MVCamera(
         mindvision::CameraParam(0, mindvision::RESOLUTION_1280_X_1024, mindvision::EXPOSURE_5000));
     cv::Mat src_img_;
@@ -19,6 +22,7 @@ int main()
 
     // 初始化网络模型
     const string network_path = "Detector/model/opt-0517-001.xml";
+
     armor_detector.initModel(network_path);
 
     fps::FPS global_fps_;

@@ -4,13 +4,16 @@
 #include <iostream>
 #include <iterator>
 #include <memory>
+#include <openvino/runtime/compiled_model.hpp>
+#include <openvino/runtime/tensor.hpp>
 #include <string>
 #include <vector>
 
 #include "../../Utils/general.hpp"
 #include <Eigen/Core>
-#include <inference_engine.hpp>
+#include <ie/cpp/ie_cnn_network.h>
 #include <opencv2/opencv.hpp>
+#include <openvino/openvino.hpp>
 
 using namespace std;
 using namespace cv;
@@ -55,13 +58,10 @@ class ArmorDetector
 
   private:
     int isFindArmor = 0;
-    Core ie;
-    CNNNetwork network;                   // 网络
-    ExecutableNetwork executable_network; // 可执行网络
-    InferRequest infer_request;           // 推理请求
-    MemoryBlob::CPtr moutput;
-    string input_name;
-    string output_name;
+    ov::Core ie;
+    std::shared_ptr<ov::Model> model; // 网络
+    ov::CompiledModel compiled_model; // 可执行网络
+    ov::InferRequest infer_request;   // 推理请求
     // ArmorState state;
     ArmorObject armor_object;
 

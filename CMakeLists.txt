@@ -21,11 +21,10 @@ else ()
     add_compile_options(-O0 -g)
 endif ()
 
-include_directories(/usr/include/ie/)
 INCLUDE_DIRECTORIES(${InferenceEngine_INCLUDE_DIRS})
+include_directories(/usr/include/ie)
 
 add_executable(Vision main.cpp)
-target_link_libraries(Vision)
 
 include_directories(Utils)
 add_subdirectory(Utils)
@@ -46,3 +45,10 @@ target_link_libraries(Vision Detector)
 # include_directories(record)
 # add_subdirectory(record)
 # target_link_libraries(CVRM2021 record)
+
+# Set built binary to ~/bin
+set(EXECUTABLE_OUTPUT_PATH "${PROJECT_BINARY_DIR}/bin")
+
+# Set built library to ~/lib
+set(LIBRARY_OUTPUT_PATH "${PROJECT_BINARY_DIR}/lib")
+

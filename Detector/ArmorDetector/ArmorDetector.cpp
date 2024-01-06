@@ -2,16 +2,18 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include "ArmorDetector.hpp"
+#include "core/hal/interface.h"
+#include <cmath>
 
 using namespace armor_detector;
 
 // static constexpr int INPUT_W = 640;    // Width of input
 // static constexpr int INPUT_H = 384;    // Height of input
-static constexpr int INPUT_W = 416;    // Width of input
-static constexpr int INPUT_H = 416;    // Height of input
-static constexpr int NUM_CLASSES = 8;  // Number of classes
-static constexpr int NUM_COLORS = 4;   // Number of color
-static constexpr int TOPK = 128;       // TopK
+static constexpr int INPUT_W = 416;   // Width of input
+static constexpr int INPUT_H = 416;   // Height of input
+static constexpr int NUM_CLASSES = 8; // Number of classes
+static constexpr int NUM_COLORS = 4;  // Number of color
+static constexpr int TOPK = 128;      // TopK
 static constexpr float NMS_THRESH = 0.3;
 static constexpr float BBOX_CONF_THRESH = 0.6;
 static constexpr float FFT_CONF_ERROR = 0.15;
@@ -20,8 +22,10 @@ static constexpr float FFT_MIN_IOU = 0.9;
 static inline int argmax(const float *ptr, int len)
 {
     int max_arg = 0;
-    for (int i = 1; i < len; i++) {
-        if (ptr[i] > ptr[max_arg]) max_arg = i;
+    for (int i = 1; i < len; i++)
+    {
+        if (ptr[i] > ptr[max_arg])
+            max_arg = i;
     }
     return max_arg;
 }
@@ -32,7 +36,7 @@ static inline int argmax(const float *ptr, int len)
  * @param transform_matrix Transform Matrix of Resize
  * @return Image after resize
  */
-inline cv::Mat scaledResize(cv::Mat& img, Eigen::Matrix<float,3,3> &transform_matrix)
+inline cv::Mat scaledResize(cv::Mat &img, Eigen::Matrix<float, 3, 3> &transform_matrix)
 {
     float r = std::min(INPUT_W / (img.cols * 1.0), INPUT_H / (img.rows * 1.0));
     int unpad_w = r * img.cols;
@@ -44,12 +48,10 @@ inline cv::Mat scaledResize(cv::Mat& img, Eigen::Matrix<float,3,3> &transform_ma
     dw /= 2;
     dh /= 2;
 
-    transform_matrix << 1.0 / r, 0, -dw / r,
-                        0, 1.0 / r, -dh / r,
-                        0, 0, 1;
+    transform_matrix << 1.0 / r, 0, -dw / r, 0, 1.0 / r, -dh / r, 0, 0, 1;
 
     Mat re;
-    cv::resize(img, re, Size(unpad_w,unpad_h));
+    cv::resize(img, re, Size(unpad_w, unpad_h));
     Mat out;
     cv::copyMakeBorder(re, out, dh, dh, dw, dw, BORDER_CONSTANT);
 
@@ -63,8 +65,8 @@ inline cv::Mat scaledResize(cv::Mat& img, Eigen::Matrix<float,3,3> &transform_ma
  * @param strides A vector of stride.
  * @param grid_strides Grid stride generated in this function.
  */
-static void generate_grids_and_stride(const int target_w, const int target_h,
-                                      std::vector<int>& strides, std::vector<GridAndStride>& grid_strides)
+static void generate_grids_and_stride(const int target_w, const int target_h, std::vector<int> &strides,
+                                      std::vector<GridAndStride> &grid_strides)
 {
     for (auto stride : strides)
     {
@@ -88,13 +90,13 @@ static void generate_grids_and_stride(const int target_w, const int target_h,
  * @param prob_threshold Confidence Threshold.
  * @param objects Objects proposed.
  */
-static void generateYoloxProposals(std::vector<GridAndStride> grid_strides, const float* feat_ptr,
-                                   Eigen::Matrix<float,3,3> &transform_matrix,float prob_threshold,
-                                   std::vector<ArmorObject>& objects)
+static void generateYoloxProposals(std::vector<GridAndStride> grid_strides, const float *feat_ptr,
+                                   Eigen::Matrix<float, 3, 3> &transform_matrix, float prob_threshold,
+                                   std::vector<ArmorObject> &objects)
 {
 
     const int num_anchors = grid_strides.size();
-    //Travel all the anchors
+    // Travel all the anchors
     for (int anchor_idx = 0; anchor_idx < num_anchors; anchor_idx++)
     {
         const int grid0 = grid_strides[anchor_idx].grid0;
@@ -130,22 +132,20 @@ static void generateYoloxProposals(std::vector<GridAndStride> grid_strides, cons
         {
             ArmorObject obj;
 
-            Eigen::Matrix<float,3,4> apex_norm;
-            Eigen::Matrix<float,3,4> apex_dst;
+            Eigen::Matrix<float, 3, 4> apex_norm;
+            Eigen::Matrix<float, 3, 4> apex_dst;
 
-            apex_norm << x_1,x_2,x_3,x_4,
-                    y_1,y_2,y_3,y_4,
-                    1,1,1,1;
+            apex_norm << x_1, x_2, x_3, x_4, y_1, y_2, y_3, y_4, 1, 1, 1, 1;
 
             apex_dst = transform_matrix * apex_norm;
 
             for (int i = 0; i < 4; i++)
             {
-                obj.apex[i] = cv::Point2f(apex_dst(0,i),apex_dst(1,i));
+                obj.apex[i] = cv::Point2f(apex_dst(0, i), apex_dst(1, i));
                 obj.pts.push_back(obj.apex[i]);
             }
 
-            vector<cv::Point2f> tmp(obj.apex,obj.apex + 4);
+            vector<cv::Point2f> tmp(obj.apex, obj.apex + 4);
             obj.rect = cv::boundingRect(tmp);
 
             obj.cls = box_class;
@@ -164,13 +164,13 @@ static void generateYoloxProposals(std::vector<GridAndStride> grid_strides, cons
  * @param b Object b.
  * @return Area of intersection.
  */
-static inline float intersection_area(const ArmorObject& a, const ArmorObject& b)
+static inline float intersection_area(const ArmorObject &a, const ArmorObject &b)
 {
     cv::Rect_<float> inter = a.rect & b.rect;
     return inter.area();
 }
 
-static void qsort_descent_inplace(std::vector<ArmorObject>& faceobjects, int left, int right)
+static void qsort_descent_inplace(std::vector<ArmorObject> &faceobjects, int left, int right)
 {
     int i = left;
     int j = right;
@@ -198,17 +198,18 @@ static void qsort_descent_inplace(std::vector<ArmorObject>& faceobjects, int lef
     {
 #pragma omp section
         {
-            if (left < j) qsort_descent_inplace(faceobjects, left, j);
+            if (left < j)
+                qsort_descent_inplace(faceobjects, left, j);
         }
 #pragma omp section
         {
-            if (i < right) qsort_descent_inplace(faceobjects, i, right);
+            if (i < right)
+                qsort_descent_inplace(faceobjects, i, right);
         }
     }
 }
 
-
-static void qsort_descent_inplace(std::vector<ArmorObject>& objects)
+static void qsort_descent_inplace(std::vector<ArmorObject> &objects)
 {
     if (objects.empty())
         return;
@@ -216,9 +217,7 @@ static void qsort_descent_inplace(std::vector<ArmorObject>& objects)
     qsort_descent_inplace(objects, 0, objects.size() - 1);
 }
 
-
-static void nms_sorted_bboxes(std::vector<ArmorObject>& faceobjects, std::vector<int>& picked,
-                              float nms_threshold)
+static void nms_sorted_bboxes(std::vector<ArmorObject> &faceobjects, std::vector<int> &picked, float nms_threshold)
 {
     picked.clear();
 
@@ -232,12 +231,12 @@ static void nms_sorted_bboxes(std::vector<ArmorObject>& faceobjects, std::vector
 
     for (int i = 0; i < n; i++)
     {
-        ArmorObject& a = faceobjects[i];
+        ArmorObject &a = faceobjects[i];
 
         int keep = 1;
         for (int j = 0; j < (int)picked.size(); j++)
         {
-            ArmorObject& b = faceobjects[picked[j]];
+            ArmorObject &b = faceobjects[picked[j]];
 
             // intersection over union
             float inter_area = intersection_area(a, b);
@@ -246,9 +245,8 @@ static void nms_sorted_bboxes(std::vector<ArmorObject>& faceobjects, std::vector
             if (iou > nms_threshold)
             {
                 keep = 0;
-                //Stored for FFT
-                if (iou > FFT_MIN_IOU && abs(a.prob - b.prob) < FFT_CONF_ERROR
-                    && a.cls == b.cls && a.color == b.color)
+                // Stored for FFT
+                if (iou > FFT_MIN_IOU && abs(a.prob - b.prob) < FFT_CONF_ERROR && a.cls == b.cls && a.color == b.color)
                 {
                     for (int i = 0; i < 4; i++)
                     {
@@ -271,8 +269,8 @@ static void nms_sorted_bboxes(std::vector<ArmorObject>& faceobjects, std::vector
  * @param img_w Width of Image.
  * @param img_h Height of Image.
  */
-static void decodeOutputs(const float* prob, std::vector<ArmorObject>& objects,
-                          Eigen::Matrix<float,3,3> &transform_matrix, const int img_w, const int img_h)
+static void decodeOutputs(const float *prob, std::vector<ArmorObject> &objects,
+                          Eigen::Matrix<float, 3, 3> &transform_matrix, const int img_w, const int img_h)
 {
     std::vector<ArmorObject> proposals;
     std::vector<int> strides = {8, 16, 32};
@@ -297,112 +295,97 @@ static void decodeOutputs(const float* prob, std::vector<ArmorObject>& objects,
 
 ArmorDetector::ArmorDetector()
 {
-
 }
 
 ArmorDetector::~ArmorDetector()
 {
-
 }
-//TODO:change to your dir
+
+// TODO:change to your dir
 bool ArmorDetector::initModel(string path)
 {
-    ie.SetConfig({{CONFIG_KEY(CACHE_DIR), "../.cache"}});
-    ie.SetConfig({{CONFIG_KEY(CPU_THROUGHPUT_STREAMS),"CPU_THROUGHPUT_AUTO"}});
-    //ie.SetConfig({{CONFIG_KEY(GPU_THROUGHPUT_STREAMS),"1"}});
-    // Step 1. Read a model in OpenVINO Intermediate Representation (.xml and
-    // .bin files) or ONNX (.onnx file) format
-    network = ie.ReadNetwork(path);
-    if (network.getOutputsInfo().size() != 1)
-        throw std::logic_error("Sample supports topologies with 1 output only");
+    ie.set_property("CPU", ov::enable_profiling(true));
 
-    // Step 2. Configure input & output
-    //  Prepare input blobs
-    InputInfo::Ptr input_info = network.getInputsInfo().begin()->second;
-    input_name = network.getInputsInfo().begin()->first;
+    model = ie.read_model(path);
 
+    compiled_model = ie.compile_model(model, "CPU");
 
-    //  Prepare output blobs
-    if (network.getOutputsInfo().empty())
-    {
-        std::cerr << "Network outputs info is empty" << std::endl;
-        return EXIT_FAILURE;
-    }
-    DataPtr output_info = network.getOutputsInfo().begin()->second;
-    output_name = network.getOutputsInfo().begin()->first;
+    infer_request = compiled_model.create_infer_request();
 
-    // output_info->setPrecision(Precision::FP16);
-    // Step 3. Loading a model to the device
-    // executable_network = ie.LoadNetwork(network, "MULTI:GPU");
-    //executable_network = ie.LoadNetwork(network, "GPU");
-    executable_network = ie.LoadNetwork(network, "CPU");
+    //moutput = infer_request.get_output_tensor(0);
 
-    // Step 4. Create an infer request
-    infer_request = executable_network.CreateInferRequest();
-    const Blob::Ptr output_blob = infer_request.GetBlob(output_name);
-    moutput = as<MemoryBlob>(output_blob);
-    // Blob::Ptr input = infer_request.GetBlob(input_name);     // just wrap Mat data by Blob::Ptr
-    if (!moutput)
-    {
-        throw std::logic_error("We expect output to be inherited from MemoryBlob, "
-                               "but by fact we were not able to cast output to MemoryBlob");
-    }
-    // locked memory holder should be alive all time while access to its buffer
-    // happens
     return true;
+
+    // // 1.Create Runtime Core
+    // // ov::Core ie;
+    // model = ie.read_model(path);
+
+    // // 2.Compile the model
+    // ov::CompiledModel compiled_model = ie.compile_model(path, "GPU");
+
+    // // 3.Create inference request
+    // infer_request = compiled_model.create_infer_request();
+
+    // // 4.Set inputs
+    // // Get input tensor by index
+    // input_tensor = infer_request.get_input_tensor(0);
+    // // IR v10 works with converted precisions (i64 -> i32)
+    // // auto data = input_tensor.data<int32_t>();
+    // // Fill first data ...
+
+    // return true;
 }
 
-bool ArmorDetector::detect(Mat &src, std::vector<ArmorObject>& objects)
+bool ArmorDetector::detect(Mat &src, std::vector<ArmorObject> &objects)
 {
     if (src.empty())
     {
         std::cout << " ERROR: 传入了空的src " << std::endl;
         return false;
     }
-    cv::Mat pr_img = scaledResize(src,transfrom_matrix);
+
+    cv::Mat pr_img = scaledResize(src, transfrom_matrix);
 #ifdef SHOW_INPUT
-    namedWindow("network_input",0);
-    imshow("network_input",pr_img);
+    namedWindow("network_input", 0);
+    imshow("network_input", pr_img);
     waitKey(1);
-#endif //SHOW_INPUT
+#endif // SHOW_INPUT
     cv::Mat pre;
     cv::Mat pre_split[3];
-    pr_img.convertTo(pre,CV_32F);
-    cv::split(pre,pre_split);
+    pr_img.convertTo(pre, CV_32F);
+    cv::split(pre, pre_split);
+    ov::Tensor imgBlob = infer_request.get_input_tensor(0); // just wrap Mat data by Blob::Ptr
 
-    Blob::Ptr imgBlob = infer_request.GetBlob(input_name);     // just wrap Mat data by Blob::Ptr
-    InferenceEngine::MemoryBlob::Ptr mblob = InferenceEngine::as<InferenceEngine::MemoryBlob>(imgBlob);
     // locked memory holder should be alive all time while access to its buffer happens
-    auto mblobHolder = mblob->wmap();
-    float *blob_data = mblobHolder.as<float *>();
+    auto blob_data = imgBlob.data<float_t>();
 
     auto img_offset = INPUT_W * INPUT_H;
-    //Copy img into blob
-    for(int c = 0;c < 3;c++)
+    // Copy img into blob
+    for (int c = 0; c < 3; c++)
     {
         memcpy(blob_data, pre_split[c].data, INPUT_W * INPUT_H * sizeof(float));
         blob_data += img_offset;
     }
 
-//     auto t1 = std::chrono::steady_clock::now();
-    infer_request.Infer();
-//     auto t2 = std::chrono::steady_clock::now();
-//     cout<<(float)(std::chrono::duration<double,std::milli>(t2 - t1).count())<<endl;
+    //     auto t1 = std::chrono::steady_clock::now();
+    infer_request.start_async();
+    infer_request.wait();
+    //     auto t2 = std::chrono::steady_clock::now();
+    //     cout<<(float)(std::chrono::duration<double,std::milli>(t2 - t1).count())<<endl;
     // infer_request.GetPerformanceCounts();
     // -----------------------------------------------------------------------------------------------------
     // --------------------------- Step 8. Process output----------------
     // const Blob::Ptr output_blob = infer_request.GetBlob(output_name);
     // MemoryBlob::CPtr moutput = as<MemoryBlob>(output_blob);
-
-    auto moutputHolder = moutput->rmap();
-    const float* net_pred = moutputHolder.as<const PrecisionTrait<Precision::FP32>::value_type*>();
+    ov::Tensor output_tensor = infer_request.get_output_tensor();
+    const float *net_pred = output_tensor.data<float_t>();
     int img_w = src.cols;
     int img_h = src.rows;
 
     decodeOutputs(net_pred, objects, transfrom_matrix, img_w, img_h);
     for (auto object = objects.begin(); object != objects.end(); ++object)
     {
-        //对候选框预测角点进行平均,降低误差
+        // 对候选框预测角点进行平均,降低误差
         if ((*object).pts.size() >= 8)
         {
             auto N = (*object).pts.size();
@@ -410,7 +393,7 @@ bool ArmorDetector::detect(Mat &src, std::vector<ArmorObject>& objects)
 
             for (int i = 0; i < N; i++)
             {
-                pts_final[i % 4]+=(*object).pts[i];
+                pts_final[i % 4] += (*object).pts[i];
             }
 
             for (int i = 0; i < 4; i++)
@@ -423,43 +406,46 @@ bool ArmorDetector::detect(Mat &src, std::vector<ArmorObject>& objects)
             (*object).apex[1] = pts_final[1];
             (*object).apex[2] = pts_final[2];
             (*object).apex[3] = pts_final[3];
-
         }
         (*object).area = (int)(calcTetragonArea((*object).apex));
     }
     if (objects.size() != 0)
     {
-        isFindArmor=1;
+        isFindArmor = 1;
         return true;
     }
-        
-    else 
+
+    else
     {
-        isFindArmor=0;
+        isFindArmor = 0;
         return false;
     }
-
 }
 
-void ArmorDetector::display(Mat &image2show, ArmorObject object) {
+void ArmorDetector::display(Mat &image2show, ArmorObject object)
+{
     // 绘制十字瞄准线
-    line(image2show, Point2f(image2show.size().width / 2, 0), Point2f(image2show.size().width / 2, image2show.size().height), {0,255,0}, 1);
-    line(image2show, Point2f(0, image2show.size().height / 2), Point2f(image2show.size().width, image2show.size().height / 2), {0,255,0}, 1);
+    line(image2show, Point2f(image2show.size().width / 2, 0),
+         Point2f(image2show.size().width / 2, image2show.size().height), {0, 255, 0}, 1);
+    line(image2show, Point2f(0, image2show.size().height / 2),
+         Point2f(image2show.size().width, image2show.size().height / 2), {0, 255, 0}, 1);
 
     // 绘制四点
     // for (int i = 0; i < 4; i++) {
     //     circle(image2show, Point(object.apex[i].x, object.apex[i].y), 3, Scalar(100, 200, 0), 5);
     // }
     // 绘制左上角顶点
-    //circle(image2show, Point(object.apex->x, object.apex->y),3,Scalar(255, 255, 0),8 );
+    // circle(image2show, Point(object.apex->x, object.apex->y),3,Scalar(255, 255, 0),8 );
     circle(image2show, Point(object.apex[0].x, object.apex[0].y), 3, Scalar(255, 0, 0), 5);
     circle(image2show, Point(object.apex[1].x, object.apex[1].y), 3, Scalar(0, 255, 0), 5);
     circle(image2show, Point(object.apex[2].x, object.apex[2].y), 3, Scalar(0, 0, 255), 5);
     circle(image2show, Point(object.apex[3].x, object.apex[3].y), 3, Scalar(255, 255, 0), 5);
-    circle(image2show, Point((object.apex[0].x+object.apex[2].x)/2, (object.apex[0].y+object.apex[2].y)/2), 5, Scalar(255, 255, 255), 5);
-    
+    circle(image2show, Point((object.apex[0].x + object.apex[2].x) / 2, (object.apex[0].y + object.apex[2].y) / 2), 5,
+           Scalar(255, 255, 255), 5);
+
     // 绘制装甲板四点矩形
-    for (int i = 0; i < 4; i++) {
+    for (int i = 0; i < 4; i++)
+    {
         line(image2show, object.pts[i], object.pts[(i + 1) % 4], Scalar(100, 200, 0), 3);
     }
 
@@ -468,22 +454,22 @@ void ArmorDetector::display(Mat &image2show, ArmorObject object) {
     int box_top_x = object.apex->x;
     int box_top_y = object.apex->y;
     if (object.color == 0)
-        cv::putText(image2show, "Blue_"+to_string(id), Point(box_top_x + 2, box_top_y), cv::FONT_HERSHEY_TRIPLEX, 1,
+        cv::putText(image2show, "Blue_" + to_string(id), Point(box_top_x + 2, box_top_y), cv::FONT_HERSHEY_TRIPLEX, 1,
                     Scalar(255, 0, 0));
     else if (object.color == 1)
-        cv::putText(image2show, "Red_"+to_string(id), Point(box_top_x + 2, box_top_y), cv::FONT_HERSHEY_TRIPLEX, 1,
+        cv::putText(image2show, "Red_" + to_string(id), Point(box_top_x + 2, box_top_y), cv::FONT_HERSHEY_TRIPLEX, 1,
                     Scalar(0, 0, 255));
     else if (object.color == 2)
-        cv::putText(image2show, "None_"+to_string(id), Point(box_top_x + 2, box_top_y), cv::FONT_HERSHEY_TRIPLEX, 1,
+        cv::putText(image2show, "None_" + to_string(id), Point(box_top_x + 2, box_top_y), cv::FONT_HERSHEY_TRIPLEX, 1,
                     Scalar(0, 255, 0));
 }
 
 int ArmorDetector::getArmorType()
 {
-	return armor_object.distinguish;
+    return armor_object.distinguish;
 }
 
 int ArmorDetector::isFindTarget()
 {
-        return isFindArmor;
+    return isFindArmor;
 }
