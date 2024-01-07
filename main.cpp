@@ -20,7 +20,6 @@ int main()
     std::vector<cv::Point2f> image_points;
     armor_detector::ArmorDetector armor_detector;
     std::vector<armor_detector::ArmorObject> objects;
-    armor_detector::ArmorObject optimal_target;
 
     // 初始化网络模型
     const string network_path = "Detector/model/opt-0517-001.xml";

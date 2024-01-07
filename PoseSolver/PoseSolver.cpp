@@ -31,22 +31,22 @@ PoseSolver::PoseSolver(const char *filePath, int camId)
     setCameraParams(cameraMatrix, distortionCoeffs);
     fsRead.release();
     // Unit: m
-    constexpr double small_half_y = SMALL_ARMOR_WIDTH / 2.0 / 1000.0;
-    constexpr double small_half_z = SMALL_ARMOR_HEIGHT / 2.0 / 1000.0;
-    constexpr double large_half_y = LARGE_ARMOR_WIDTH / 2.0 / 1000.0;
-    constexpr double large_half_z = LARGE_ARMOR_HEIGHT / 2.0 / 1000.0;
+    constexpr double small_half_width = SMALL_ARMOR_WIDTH / 2.0 / 1000.0;
+    constexpr double small_half_height = SMALL_ARMOR_HEIGHT / 2.0 / 1000.0;
+    constexpr double large_half_ywidth = LARGE_ARMOR_WIDTH / 2.0 / 1000.0;
+    constexpr double large_half_height = LARGE_ARMOR_HEIGHT / 2.0 / 1000.0;
 
     // Start from bottom left in clockwise order
     // Model coordinate: x forward, y left, z up
-    smallObjPoints.emplace_back(cv::Point3f(0, small_half_y, -small_half_z));
-    smallObjPoints.emplace_back(cv::Point3f(0, small_half_y, small_half_z));
-    smallObjPoints.emplace_back(cv::Point3f(0, -small_half_y, small_half_z));
-    smallObjPoints.emplace_back(cv::Point3f(0, -small_half_y, -small_half_z));
+    smallObjPoints.emplace_back(Point3f(-small_half_width, small_half_height, 0));  // tl top left左上
+    smallObjPoints.emplace_back(Point3f(-small_half_width, -small_half_height, 0)); // bl below left左下
+    smallObjPoints.emplace_back(Point3f(small_half_width, -small_half_height, 0));  // br below right右下
+    smallObjPoints.emplace_back(Point3f(small_half_width, small_half_height, 0));   // tr top right右上
 
-    bigObjPoints.emplace_back(cv::Point3f(0, large_half_y, -large_half_z));
-    bigObjPoints.emplace_back(cv::Point3f(0, large_half_y, large_half_z));
-    bigObjPoints.emplace_back(cv::Point3f(0, -large_half_y, large_half_z));
-    bigObjPoints.emplace_back(cv::Point3f(0, -large_half_y, -large_half_z));
+    bigObjPoints.emplace_back(Point3f(-large_half_ywidth, large_half_height, 0));  // tl top left左上
+    bigObjPoints.emplace_back(Point3f(-large_half_ywidth, -large_half_height, 0)); // br below right左下
+    bigObjPoints.emplace_back(Point3f(large_half_ywidth, -large_half_height, 0));  // bl below left右下
+    bigObjPoints.emplace_back(Point3f(large_half_ywidth, large_half_height, 0));   // tr top right右上
 }
 
 PoseSolver::~PoseSolver(void)
@@ -88,24 +88,27 @@ int PoseSolver::readFile(const char *filePath, int camId)
     return 0;
 }
 
-// void PoseSolver::setObjPoints(ArmorType type, double width, double height)
+// void PoseSolver::setObjPoints(int type)
 // {
-//     double centerX = width / 2.0;
-//     double centerY = height / 2.0;
+//     double large_half_ywidth, large_half_height;
 //     switch (type)
 //     {
 //     case smallArmor:
-//         smallObjPoints.push_back(Point3f(-centerX, centerY, 0));  // tl top left左上
-//         smallObjPoints.push_back(Point3f(-centerX, -centerY, 0)); // bl below left左下
-//         smallObjPoints.push_back(Point3f(centerX, -centerY, 0));  // br below right右下
-//         smallObjPoints.push_back(Point3f(centerX, centerY, 0));   // tr top right右上
-//         break;
+//         large_half_ywidth = SMALL_ARMOR_WIDTH / 2.0;
+//         large_half_height = SMALL_ARMOR_HEIGHT / 2.0;
+    //     smallObjPoints.emplace_back(Point3f(-large_half_ywidth, large_half_height, 0));  // tl top left左上
+    //     smallObjPoints.emplace_back(Point3f(-large_half_ywidth, -large_half_height, 0)); // bl below left左下
+    //     smallObjPoints.emplace_back(Point3f(large_half_ywidth, -large_half_height, 0));  // br below right右下
+    //     smallObjPoints.emplace_back(Point3f(large_half_ywidth, large_half_height, 0));   // tr top right右上
+    //     break;
 
-//     case bigArmor:
-//         bigObjPoints.push_back(Point3f(-centerX, centerY, 0));  // tl top left左上
-//         bigObjPoints.push_back(Point3f(-centerX, -centerY, 0)); // br below right左下
-//         bigObjPoints.push_back(Point3f(centerX, -centerY, 0));  // bl below left右下
-//         bigObjPoints.push_back(Point3f(centerX, centerY, 0));   // tr top right右上
+    // case bigArmor:
+    //     large_half_ywidth = LARGE_ARMOR_WIDTH / 2.0;
+    //     large_half_height = LARGE_ARMOR_HEIGHT / 2.0;
+    //     bigObjPoints.emplace_back(Point3f(-large_half_ywidth, large_half_height, 0));  // tl top left左上
+    //     bigObjPoints.emplace_back(Point3f(-large_half_ywidth, -large_half_height, 0)); // br below right左下
+    //     bigObjPoints.emplace_back(Point3f(large_half_ywidth, -large_half_height, 0));  // bl below left右下
+    //     bigObjPoints.emplace_back(Point3f(large_half_ywidth, large_half_height, 0));   // tr top right右上
 //         break;
 //     default:
 //         break;
@@ -150,14 +153,14 @@ void PoseSolver::solvePose(int armorType)
     double y_pos = tvec.at<double>(1, 0);
     double z_pos = tvec.at<double>(2, 0);
     cout << "==================================\n" << tvec << endl;
-    cout << "---------------------------------\n" << x_pos << endl;
+    // cout << "---------------------------------\n" << x_pos << endl;
 
     double tan_pitch = y_pos / sqrt(x_pos * x_pos + z_pos * z_pos);
     double tan_yaw = x_pos / z_pos;
 
     pnp_results.yaw_angle = static_cast<float>(atan(tan_yaw) * 180 / CV_PI);
     pnp_results.pitch_angle = static_cast<float>(-atan(tan_pitch) * 180 / CV_PI);
-    pnp_results.distance = static_cast<int>(sqrt(x_pos * x_pos + y_pos * y_pos + z_pos * z_pos));
+    pnp_results.distance = static_cast<float>(sqrt(x_pos * x_pos + y_pos * y_pos + z_pos * z_pos));
 }
 
 float PoseSolver::getYawAngle()
@@ -170,7 +173,7 @@ float PoseSolver::getPitchAngle()
     return pnp_results.pitch_angle;
 }
 
-int PoseSolver::getDistance()
+float PoseSolver::getDistance()
 {
     return pnp_results.distance;
 }

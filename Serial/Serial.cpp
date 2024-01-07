@@ -81,7 +81,7 @@ void Serial::serialInit()
 void Serial::getSendData(const int _isFindTarget, const float _yaw, const float _pitch, const int _distance)
 {
 
-    send_data.is_find_target = _isFindTarget > 1 ? 1 : _isFindTarget;
+    send_data.tracking = _isFindTarget > 1 ? 1 : _isFindTarget;
     send_data.yaw_symbol = _yaw >= 0 ? 1 : 0;
     send_data.yaw_angle = static_cast<int>(fabs(_yaw) * 100);
 
@@ -97,7 +97,7 @@ void Serial::setSendBuffer(const uint8_t &CRC)
 {
     write_buff[0] = 0x53;
     write_buff[1] = 1;
-    write_buff[2] = static_cast<unsigned char>(send_data.is_find_target);
+    write_buff[2] = static_cast<unsigned char>(send_data.tracking);
     write_buff[3] = static_cast<unsigned char>(send_data.yaw_symbol);
     write_buff[4] = returnLowBit(send_data.yaw_angle);
     write_buff[5] = returnHighBit(send_data.yaw_angle);
@@ -113,7 +113,7 @@ void Serial::setSendBuffer(const uint8_t &CRC)
 void Serial::setCrcBuffer()
 {
     crc_buff[0] = 0x53;
-    crc_buff[1] = static_cast<unsigned char>(send_data.is_find_target);
+    crc_buff[1] = static_cast<unsigned char>(send_data.tracking);
     crc_buff[2] = 0;
     crc_buff[3] = static_cast<unsigned char>(send_data.yaw_symbol);
     crc_buff[4] = returnLowBit(send_data.yaw_angle);

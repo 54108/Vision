@@ -43,7 +43,7 @@ struct SerialConfig
 // Serial port message sending structure
 struct SendData
 {
-  int is_find_target;
+  int tracking;
 
   int yaw_symbol;
   int pitch_symbol;
@@ -56,7 +56,7 @@ struct SendData
     yaw_symbol=0;
     pitch_symbol=0;
     distance=0;
-    is_find_target=0;
+    tracking=0;
     yaw_angle=0.f;
     pitch_angle=0.f;
   }

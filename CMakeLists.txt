@@ -46,6 +46,10 @@ include_directories(PoseSolver)
 add_subdirectory(PoseSolver)
 target_link_libraries(Vision PoseSolver)
 
+include_directories(Predictor)
+add_subdirectory(Predictor)
+target_link_libraries(Vision Predictor)
+
 # include_directories(record)
 # add_subdirectory(record)
 # target_link_libraries(CVRM2021 record)

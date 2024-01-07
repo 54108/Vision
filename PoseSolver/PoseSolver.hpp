@@ -14,12 +14,14 @@ struct PnP_Results
 {
     float yaw_angle;
     float pitch_angle;
-    int distance;
+    float distance;
+    float target_yaw;
     PnP_Results()
     {
         yaw_angle = 0.f;
         pitch_angle = 0.f;
-        distance = 0;
+        distance = 0.f;
+        target_yaw = 0.f;
     }
 };
 
@@ -61,9 +63,11 @@ class PoseSolver
 
     float getYawAngle();
 
+    // void setObjPoints(int type);
+
     float getPitchAngle();
 
-    int getDistance();
+    float getDistance();
 
     std::tuple<double, double, double> getPose();
 
@@ -77,7 +81,6 @@ class PoseSolver
 
     std::vector<cv::Point3f> bigObjPoints;
     std::vector<cv::Point3f> smallObjPoints;
-
     std::vector<cv::Point2f> imagePoints;
 
     static constexpr float SMALL_ARMOR_WIDTH = 135;
@@ -86,11 +89,12 @@ class PoseSolver
     static constexpr float LARGE_ARMOR_HEIGHT = 55;
 
     // cv::Mat rvec ;
-    cv::Mat tvec ;
+    cv::Mat tvec;
 
     cv::Mat rvec = cv::Mat::zeros(3, 1, CV_64FC1); //
 
     double pitch, yaw, distance;
+    double target_yaw;
 
     ArmorType armorType;
 
