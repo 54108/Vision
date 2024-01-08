@@ -2,6 +2,7 @@
 #define MSG_
 #include <Eigen/Eigen>
 #include <Eigen/src/Geometry/Quaternion.h>
+#include <atomic>
 #include <chrono>
 #include <opencv2/core/types.hpp>
 #include <opencv2/opencv.hpp>
@@ -10,15 +11,8 @@
 namespace msg
 {
 
-typedef struct pose
-{
-    cv::Point3d position;
-    Eigen::Quaterniond orientation;
-} pose;
-
 typedef struct Velocity
 {
-  public:
     float velocity;
 } Velocity;
 
@@ -40,13 +34,16 @@ typedef struct Target
 typedef struct Armor
 {
   public:
-    std::string armor_id;
+    // std::string armor_id;
     std::string number;
     std::string type;
-    cv::Point3d position;
-    // cv::Point3d velocity;
+    // cv::Point3d position;
     float distance_to_image_center;
-    pose pose;
+    struct pose
+    {
+        cv::Point3d position;
+        Eigen::Quaterniond orientation;
+    } pose;
 } Armor;
 
 typedef struct Armors
@@ -76,7 +73,11 @@ typedef struct Send
 
 typedef struct PoseStamped
 {
-    pose pose;
+    struct pose
+    {
+        cv::Point3d position;
+        Eigen::Quaterniond orientation;
+    } pose;
 } PoseStamped;
 
 } // namespace msg

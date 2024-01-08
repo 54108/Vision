@@ -2,14 +2,16 @@
 #include "Detector/ArmorDetector/ArmorDetector.hpp"
 #include "Detector/OpenVINO2022/types.hpp"
 #include "PoseSolver/PoseSolver.hpp"
+#include "Predictor/msg.hpp"
 #include "Utils/fps.hpp"
 #include "Utils/general.hpp"
-#include "Predictor/msg.hpp"
 #include <openvino/runtime/properties.hpp>
 #include <string>
 
 using namespace std;
 using namespace cv;
+
+msg::Armor armor_msg;
 
 int main()
 {
@@ -41,8 +43,7 @@ int main()
         {
             for (auto armor_object : objects)
             {
-                poseSolver.getImgpPoints(armor_object.pts);
-                poseSolver.solvePose(armor_detector.getArmorType());
+                poseSolver.solvePose(armor_object, armor_msg);
                 putText(src_img_, to_string(global_fps_.getpfs()), Point(0, 24), FONT_HERSHEY_COMPLEX, 1.0,
                         Scalar(12, 23, 200), 3, 8);
                 putText(src_img_, to_string(poseSolver.getYawAngle()), Point(0, 48), FONT_HERSHEY_COMPLEX, 1.0,

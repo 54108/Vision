@@ -50,10 +50,6 @@ include_directories(Predictor)
 add_subdirectory(Predictor)
 target_link_libraries(Vision Predictor)
 
-# include_directories(record)
-# add_subdirectory(record)
-# target_link_libraries(CVRM2021 record)
-
 # Set built binary to ~/bin
 set(EXECUTABLE_OUTPUT_PATH "${PROJECT_BINARY_DIR}/bin")
 

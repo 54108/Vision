@@ -1,6 +1,6 @@
 // Copyright 2022 Chen Jun
 #include "tracker_node.hpp"
-#include "core/types.hpp"
+#include "opencv2/core/types.hpp"
 
 // STD
 #include <chrono>
@@ -138,42 +138,13 @@ void ArmorTrackerNode::velocityCallback(const std::shared_ptr<msg::Velocity> vel
     gaf_solver->init(velocity_msg);
 }
 
-// Rotate a position vector by a quaternion
-Eigen::Vector3d rotatePositionByQuaternion(const Eigen::Quaterniond &quaternion, const Eigen::Vector3d &position)
-{
-    Eigen::Vector4d quat_vec = Eigen::Vector4d(quaternion.x(), quaternion.y(), quaternion.z(), quaternion.w());
-    Eigen::Vector4d position_vec = Eigen::Vector4d(position.x(), position.y(), position.z(), 0);
-
-    Eigen::Vector4d rotated_position_vec = quaternion * position_vec * quaternion.conjugate();
-
-    return Eigen::Vector3d(rotated_position_vec.x(), rotated_position_vec.y(), rotated_position_vec.z());
-}
-
-Eigen::Vector3d translatePositionByVector(const cv::Point3d &position, const Eigen::Vector3d &translation)
-{
-    Eigen::Vector3d translated_position;
-    translated_position.x() = position.x + translation.x();
-    translated_position.y() = position.y + translation.y();
-    translated_position.z() = position.z + translation.z();
-    return translated_position;
-}
-
 void ArmorTrackerNode::armorsCallback(const std::shared_ptr<msg::Armors> armors_msg, msg::TrackerInfo info_msg,
                                       msg::Target target_msg, msg::Send send_msg)
 {
     // Tranform armor position from image frame to world coordinate
     for (auto &armor : armors_msg->armors)
     {
-        msg::PoseStamped ps;
-        // ps.header = armors_msg->header;
-        ps.pose = armor.pose;
-        Eigen::Vector3d position;
-        position << armor.pose.position.x, armor.pose.position.y, armor.pose.position.z;
-        position = rotatePositionByQuaternion(armor.pose.orientation, position);
-        position = translatePositionByVector(armor.pose.position, position);
-        armor.pose.position.x = position.x();
-        armor.pose.position.y = position.y();
-        armor.pose.position.z = position.z();
+        
     }
 
     // Filter abnormal armors

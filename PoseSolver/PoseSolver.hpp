@@ -1,5 +1,7 @@
 #ifndef POSE_HPP
 #define POSE_HPP
+#include "../Detector/ArmorDetector/ArmorDetector.hpp"
+#include "../Predictor/msg.hpp"
 #include "opencv2/core/core.hpp"
 #include <iostream>
 #include <opencv2/opencv.hpp>
@@ -59,17 +61,17 @@ class PoseSolver
     // void setObjPoints(ArmorType type, double width, double height);
 
     void getImgpPoints(std::vector<cv::Point2f> image_points);
-    void solvePose(int armorType);
+    void solvePose(armor_detector::ArmorObject armor, msg::Armor armor_msg);
 
     float getYawAngle();
-
-    // void setObjPoints(int type);
 
     float getPitchAngle();
 
     float getDistance();
 
     std::tuple<double, double, double> getPose();
+
+    float calculateDistanceToCenter(const cv::Point2f &image_point);
 
     void runPoseSolver();
 
@@ -95,6 +97,8 @@ class PoseSolver
 
     double pitch, yaw, distance;
     double target_yaw;
+
+    msg::Armor armor_msg;
 
     ArmorType armorType;
 
