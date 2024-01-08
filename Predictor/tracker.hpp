@@ -7,6 +7,7 @@
 #include <Eigen/Eigen>
 
 // STD
+#include <Eigen/src/Geometry/Quaternion.h>
 #include <memory>
 #include <string>
 
@@ -63,7 +64,7 @@ private:
 
   void handleArmorJump(const Armor & a);
 
-  double orientationToYaw(const msg::Quaternion & q);
+  double orientationToYaw(const Eigen::Quaterniond & q);
 
   Eigen::Vector3d getArmorPositionFromState(const Eigen::VectorXd & x);
 

@@ -1,11 +1,12 @@
 // Copyright 2022 Chen Jun
 #include "tracker_node.hpp"
+#include "core/types.hpp"
 
 // STD
 #include <chrono>
+#include <iostream>
 #include <memory>
 #include <vector>
-#include <iostream>
 
 namespace rm_auto_aim
 {
@@ -129,7 +130,6 @@ ArmorTrackerNode::ArmorTrackerNode(const int &options)
     Eigen::DiagonalMatrix<double, 9> p0;
     p0.setIdentity();
     tracker_->ekf = ExtendedKalmanFilter{f, h, j_f, j_h, u_q, u_r, p0};
-
 }
 
 void ArmorTrackerNode::velocityCallback(const std::shared_ptr<msg::Velocity> velocity_msg)
@@ -138,25 +138,53 @@ void ArmorTrackerNode::velocityCallback(const std::shared_ptr<msg::Velocity> vel
     gaf_solver->init(velocity_msg);
 }
 
+// Rotate a position vector by a quaternion
+Eigen::Vector3d rotatePositionByQuaternion(const Eigen::Quaterniond &quaternion, const Eigen::Vector3d &position)
+{
+    Eigen::Vector4d quat_vec = Eigen::Vector4d(quaternion.x(), quaternion.y(), quaternion.z(), quaternion.w());
+    Eigen::Vector4d position_vec = Eigen::Vector4d(position.x(), position.y(), position.z(), 0);
+
+    Eigen::Vector4d rotated_position_vec = quaternion * position_vec * quaternion.conjugate();
+
+    return Eigen::Vector3d(rotated_position_vec.x(), rotated_position_vec.y(), rotated_position_vec.z());
+}
+
+Eigen::Vector3d translatePositionByVector(const cv::Point3d &position, const Eigen::Vector3d &translation)
+{
+    Eigen::Vector3d translated_position;
+    translated_position.x() = position.x + translation.x();
+    translated_position.y() = position.y + translation.y();
+    translated_position.z() = position.z + translation.z();
+    return translated_position;
+}
+
 void ArmorTrackerNode::armorsCallback(const std::shared_ptr<msg::Armors> armors_msg, msg::TrackerInfo info_msg,
                                       msg::Target target_msg, msg::Send send_msg)
 {
     // Tranform armor position from image frame to world coordinate
-    // for (auto &armor : armors_msg->armors)
-    // {
-    //     msg::PoseStamped ps;
-    //     ps.header = armors_msg->header;
-    //     ps.pose = armor.pose;
-    //     try
-    //     {
-    //         armor.pose = tf2_buffer_->transform(ps, target_frame_).pose;
-    //     }
-    //     catch (const tf2::ExtrapolationException &ex)
-    //     {
-    //         RCLCPP_ERROR(get_logger(), "Error while transforming %s", ex.what());
-    //         return;
-    //     }
-    // }
+    for (auto &armor : armors_msg->armors)
+    {
+        msg::PoseStamped ps;
+        // ps.header = armors_msg->header;
+        ps.pose = armor.pose;
+        Eigen::Vector3d position;
+        position << armor.pose.position.x, armor.pose.position.y, armor.pose.position.z;
+        position = rotatePositionByQuaternion(armor.pose.orientation, position);
+        position = translatePositionByVector(armor.pose.position, position);
+        armor.pose.position.x = position.x();
+        armor.pose.position.y = position.y();
+        armor.pose.position.z = position.z();
+    }
+
+    // Filter abnormal armors
+    armors_msg->armors.erase(
+        std::remove_if(armors_msg->armors.begin(), armors_msg->armors.end(),
+                       [this](const msg::Armor &armor) {
+                           return abs(armor.pose.position.z) > 1.2 ||
+                                  Eigen::Vector2d(armor.pose.position.x, armor.pose.position.y).norm() >
+                                      max_armor_distance_;
+                       }),
+        armors_msg->armors.end());
 
     // Init message
     // msg::TrackerInfo info_msg;
@@ -223,13 +251,6 @@ void ArmorTrackerNode::armorsCallback(const std::shared_ptr<msg::Armors> armors_
     }
 
     last_time_ = time_;
-
-    // publish(send_msg);
-
-    // publish(target_msg);
-
-    // publishMarkers(target_msg);
 }
 
 } // namespace rm_auto_aim
-

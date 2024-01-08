@@ -16,7 +16,7 @@ namespace rm_auto_aim
 class ArmorTrackerNode
 {
   public:
-    explicit ArmorTrackerNode(const int &tracker_state);
+    explicit ArmorTrackerNode(const int &);
 
     int declare_Parameter(std::string s, int a);
     double declare_Parameter(std::string s, double a);
@@ -36,6 +36,8 @@ class ArmorTrackerNode
     std::chrono::time_point<std::chrono::system_clock> last_time_;
 
     double dt_;
+
+    std::string target_frame_;
 
     // Armor tracker
     double s2qxyz_, s2qyaw_, s2qr_;

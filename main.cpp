@@ -4,6 +4,7 @@
 #include "PoseSolver/PoseSolver.hpp"
 #include "Utils/fps.hpp"
 #include "Utils/general.hpp"
+#include "Predictor/msg.hpp"
 #include <openvino/runtime/properties.hpp>
 #include <string>
 

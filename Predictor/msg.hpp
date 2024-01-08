@@ -1,20 +1,21 @@
 #ifndef MSG_
 #define MSG_
-#include <opencv2/core/types.hpp>
+#include <Eigen/Eigen>
+#include <Eigen/src/Geometry/Quaternion.h>
 #include <chrono>
+#include <opencv2/core/types.hpp>
 #include <opencv2/opencv.hpp>
 #include <string>
 #include <vector>
 namespace msg
 {
 
-typedef struct Quaternion
+typedef struct pose
 {
-    float w;
-    float x;
-    float y;
-    float z;
-}Quaternion;
+    cv::Point3d position;
+    Eigen::Quaterniond orientation;
+} pose;
+
 typedef struct Velocity
 {
   public:
@@ -45,11 +46,7 @@ typedef struct Armor
     cv::Point3d position;
     // cv::Point3d velocity;
     float distance_to_image_center;
-    struct pose
-    {
-        cv::Point3d position;
-        Quaternion orientation;
-    } pose;
+    pose pose;
 } Armor;
 
 typedef struct Armors
@@ -76,6 +73,11 @@ typedef struct Send
     float pitch;
     float yaw;
 } Send;
+
+typedef struct PoseStamped
+{
+    pose pose;
+} PoseStamped;
 
 } // namespace msg
 #endif
