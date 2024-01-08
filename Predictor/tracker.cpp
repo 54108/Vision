@@ -271,17 +271,17 @@ double shortest_angular_distance(double angle1, double angle2)
     return diff;
 }
 
-double Tracker::orientationToYaw(const msg::Quaternion &q)
+double Tracker::orientationToYaw(const Eigen::Quaterniond &q)
 {
     // Get armor yaw
     // Eigen::Quaterniond tf_q(q.w, q.x, q.y, q.z);
     // tf2::fromMsg(q, tf_q);
     // double roll, pitch, yaw;
     // tf2::Matrix3x3(tf_q).getRPY(roll, pitch, yaw);
-    double x = q.x;
-    double y = q.y;
-    double z = q.z;
-    double w = q.w;
+    double x = q.x();
+    double y = q.y();
+    double z = q.z();
+    double w = q.w();
     double r = x * x + y * y - z * z - w * w;
     double p = 2 * (x * y + w * z);
     double yaw = atan2(2 * (w * x + y * z), 1 - 2 * (x * x + y * y));
