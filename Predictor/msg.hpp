@@ -34,10 +34,8 @@ typedef struct Target
 typedef struct Armor
 {
   public:
-    // std::string armor_id;
     std::string number;
     std::string type;
-    // cv::Point3d position;
     float distance_to_image_center;
     struct pose
     {

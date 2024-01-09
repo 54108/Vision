@@ -3,6 +3,7 @@
 
 #include "../../Utils/general.hpp"
 #include "../OpenVINO2022/openvino_detector.hpp"
+#include "../../Predictor/msg.hpp"
 #include <Eigen/Core>
 #include <ie/cpp/ie_cnn_network.h>
 #include <iostream>

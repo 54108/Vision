@@ -312,7 +312,7 @@ bool ArmorDetector::initModel(string path)
 
     infer_request = compiled_model.create_infer_request();
 
-    //moutput = infer_request.get_output_tensor(0);
+    // moutput = infer_request.get_output_tensor(0);
 
     return true;
 
@@ -414,7 +414,6 @@ bool ArmorDetector::detect(Mat &src, std::vector<ArmorObject> &objects)
         isFindArmor = 1;
         return true;
     }
-
     else
     {
         isFindArmor = 0;
@@ -425,10 +424,10 @@ bool ArmorDetector::detect(Mat &src, std::vector<ArmorObject> &objects)
 void ArmorDetector::display(Mat &image2show, ArmorObject object)
 {
     // 绘制十字瞄准线
-    // line(image2show, Point2f(image2show.size().width / 2, 0),
-    //      Point2f(image2show.size().width / 2, image2show.size().height), {0, 255, 0}, 1);
-    // line(image2show, Point2f(0, image2show.size().height / 2),
-    //      Point2f(image2show.size().width, image2show.size().height / 2), {0, 255, 0}, 1);
+    line(image2show, Point2f(image2show.size().width / 2, 0),
+         Point2f(image2show.size().width / 2, image2show.size().height), {0, 255, 0}, 1);
+    line(image2show, Point2f(0, image2show.size().height / 2),
+         Point2f(image2show.size().width, image2show.size().height / 2), {0, 255, 0}, 1);
 
     // 绘制四点
     // for (int i = 0; i < 4; i++) {
@@ -473,4 +472,3 @@ int ArmorDetector::isFindTarget()
 {
     return isFindArmor;
 }
-

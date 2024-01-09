@@ -5,6 +5,8 @@
 #include "Predictor/msg.hpp"
 #include "Utils/fps.hpp"
 #include "Utils/general.hpp"
+#include <chrono>
+#include <cstdlib>
 #include <openvino/runtime/properties.hpp>
 #include <string>
 
@@ -12,6 +14,12 @@ using namespace std;
 using namespace cv;
 
 msg::Armor armor_msg;
+msg::Armors armors_msg;
+msg::Velocity velocity;
+msg::Target target;
+msg::TrackerInfo tracker_info;
+msg::Send send;
+msg::PoseStamped posestamped;
 
 int main()
 {
@@ -34,23 +42,33 @@ int main()
     while (true)
     {
         global_fps_.getTick();
+
+        std::chrono::system_clock::time_point now = std::chrono::system_clock::now();
+
         if (mv_capture_->isCameraOnline())
         {
             src_img_ = mv_capture_->image();
         }
+
+        std::chrono::system_clock::time_point camera = std::chrono::system_clock::now();
 
         if (armor_detector.detect(src_img_, objects))
         {
             for (auto armor_object : objects)
             {
                 poseSolver.solvePose(armor_object, armor_msg);
-                putText(src_img_, to_string(global_fps_.getpfs()), Point(0, 24), FONT_HERSHEY_COMPLEX, 1.0,
-                        Scalar(12, 23, 200), 3, 8);
-                putText(src_img_, to_string(poseSolver.getYawAngle()), Point(0, 48), FONT_HERSHEY_COMPLEX, 1.0,
-                        Scalar(12, 23, 200), 3, 8);
-                armor_detector.display(src_img_, armor_object); // 识别结果可视化
+                // putText(src_img_, to_string(global_fps_.getpfs()), Point(0, 24), FONT_HERSHEY_COMPLEX, 1.0,
+                //         Scalar(12, 23, 200), 3, 8);
+                // putText(src_img_, to_string(poseSolver.getYawAngle()), Point(0, 48), FONT_HERSHEY_COMPLEX, 1.0,
+                //         Scalar(12, 23, 200), 3, 8);
+                // armor_detector.display(src_img_, armor_object); // 识别结果可视化
             }
         }
+
+        std::chrono::system_clock::time_point solvepose = std::chrono::system_clock::now();
+
+        cout << "cmaera:" << (camera - now).count()/1000000 << endl;
+        cout << "detect and solvepose:" << (solvepose - camera).count()/1000000 << endl;
 
         imshow("output", src_img_);
 

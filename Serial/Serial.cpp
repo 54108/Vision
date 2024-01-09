@@ -82,12 +82,12 @@ void Serial::getSendData(const int _isFindTarget, const float _yaw, const float 
 {
 
     send_data.tracking = _isFindTarget > 1 ? 1 : _isFindTarget;
-    send_data.yaw_symbol = _yaw >= 0 ? 1 : 0;
+    send_data.yaw = _yaw >= 0 ? 1 : 0;
     send_data.yaw_angle = static_cast<int>(fabs(_yaw) * 100);
 
     // cout<<"       "<<send_data.yaw_angle<<endl;
 
-    send_data.pitch_symbol = _pitch >= 0 ? 1 : 0;
+    send_data.pitch = _pitch >= 0 ? 1 : 0;
     send_data.pitch_angle = static_cast<float>(fabs(_pitch) * 100);
     // cout<<"       "<<send_data.pitch_angle<<endl;
     send_data.distance = _distance;
@@ -98,10 +98,10 @@ void Serial::setSendBuffer(const uint8_t &CRC)
     write_buff[0] = 0x53;
     write_buff[1] = 1;
     write_buff[2] = static_cast<unsigned char>(send_data.tracking);
-    write_buff[3] = static_cast<unsigned char>(send_data.yaw_symbol);
+    write_buff[3] = static_cast<unsigned char>(send_data.yaw);
     write_buff[4] = returnLowBit(send_data.yaw_angle);
     write_buff[5] = returnHighBit(send_data.yaw_angle);
-    write_buff[6] = static_cast<unsigned char>(send_data.pitch_symbol);
+    write_buff[6] = static_cast<unsigned char>(send_data.pitch);
     write_buff[7] = returnLowBit(send_data.pitch_angle);
     write_buff[8] = returnHighBit(send_data.pitch_angle);
     write_buff[9] = returnLowBit(send_data.distance);
@@ -115,10 +115,10 @@ void Serial::setCrcBuffer()
     crc_buff[0] = 0x53;
     crc_buff[1] = static_cast<unsigned char>(send_data.tracking);
     crc_buff[2] = 0;
-    crc_buff[3] = static_cast<unsigned char>(send_data.yaw_symbol);
+    crc_buff[3] = static_cast<unsigned char>(send_data.yaw);
     crc_buff[4] = returnLowBit(send_data.yaw_angle);
     crc_buff[5] = returnHighBit(send_data.yaw_angle);
-    crc_buff[6] = static_cast<unsigned char>(send_data.pitch_symbol);
+    crc_buff[6] = static_cast<unsigned char>(send_data.pitch);
     crc_buff[7] = returnLowBit(send_data.pitch_angle);
     crc_buff[8] = returnHighBit(send_data.pitch_angle);
     crc_buff[9] = returnLowBit(send_data.distance);
