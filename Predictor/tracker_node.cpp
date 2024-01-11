@@ -130,6 +130,8 @@ ArmorTrackerNode::ArmorTrackerNode(const int &options)
     Eigen::DiagonalMatrix<double, 9> p0;
     p0.setIdentity();
     tracker_->ekf = ExtendedKalmanFilter{f, h, j_f, j_h, u_q, u_r, p0};
+
+    target_frame_ = declare_Parameter("target_frame", "odom");
 }
 
 void ArmorTrackerNode::velocityCallback(const std::shared_ptr<msg::Velocity> velocity_msg)
