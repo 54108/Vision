@@ -4,82 +4,50 @@
 #ifndef RM_SERIAL_DRIVER__RM_SERIAL_DRIVER_HPP_
 #define RM_SERIAL_DRIVER__RM_SERIAL_DRIVER_HPP_
 
-// #include <rclcpp/publisher.hpp>
-// #include <rclcpp/rclcpp.hpp>
-// #include <rclcpp/subscription.hpp>
-// #include <sensor_msgs/msg/joint_state.hpp>
-// #include <serial_driver/serial_driver.hpp>
-// #include <std_msgs/msg/float64.hpp>
-// #include <std_srvs/srv/trigger.hpp>
-// #include <visualization_msgs/msg/marker.hpp>
-
 // C++ system
 #include "Predictor/msg.hpp"
-#include <future>
-#include <memory>
-#include <string>
-#include <thread>
-#include <vector>
-#include <fstream> 
+#include "crc.hpp"
+#include "packet.hpp"
+#include <fcntl.h>
+#include <fmt/color.h>
+#include <fmt/core.h>
+#include <fstream>
 #include <iomanip>
+#include <opencv2/opencv.hpp>
+#include <string>
+#include <termios.h>
 
-
-// #include "auto_aim_interfaces/msg/target.hpp"
-// #include "auto_aim_interfaces/msg/send.hpp"
-// #include "auto_aim_interfaces/msg/velocity.hpp"
+struct Serial_Config
+{
+    std::string preferred_device = "/dev/ttyUSB0";
+    int set_baudrate = 0;
+    int show_serial_information = 0;
+};
 
 namespace rm_serial_driver
 {
 class RMSerialDriver
 {
-public:
-  explicit RMSerialDriver(const std::string &serial_port, const uint32_t &baud_rate);
+  public:
+    explicit RMSerialDriver(std::string _serial_config);
 
-  ~RMSerialDriver() ;
+    ~RMSerialDriver();
 
-private:
-  // 在 RMSerialDriver 类的头文件中添加成员变量
-  std::ofstream csv_file_;
+  private:
+    // 在 RMSerialDriver 类的头文件中添加成员变量
+    std::ofstream csv_file_;
 
-  void getParams();
+    void receiveData();
 
-  void receiveData();
+    void sendData(const msg::Send &msg);
 
-  void sendData(const msg::Send& msg);
+    void resetTracker();
 
-  void reopenPort();
+    void RMSerialInit();
 
-  void setParam(const std::string & param);
-
-  void resetTracker();
-
-  // Serial port
-  std::unique_ptr<IoContext> owned_ctx_;
-  std::string device_name_;
-  std::unique_ptr<drivers::serial_driver::SerialPortConfig> device_config_;
-  std::unique_ptr<drivers::serial_driver::SerialDriver> serial_driver_;
-
-  // Param client to set detect_colr
-  using ResultFuturePtr = std::shared_future<std::vector<rcl_interfaces::msg::SetParametersResult>>;
-  bool initial_set_param_ = false;
-  uint8_t previous_receive_color_ = 0;
-  rclcpp::AsyncParametersClient::SharedPtr detector_param_client_;
-  ResultFuturePtr set_param_future_;
-
-  // Service client to reset tracker
-  rclcpp::Client<std_srvs::srv::Trigger>::SharedPtr reset_tracker_client_;
-
-  double timestamp_offset_ = 0;
-  rclcpp::Publisher<sensor_msgs::msg::JointState>::SharedPtr joint_state_pub_;
-  rclcpp::Publisher<auto_aim_interfaces::msg::Velocity>::SharedPtr velocity_pub_;
-  rclcpp::Subscription<auto_aim_interfaces::msg::Target>::SharedPtr target_sub_;
-  rclcpp::Subscription<auto_aim_interfaces::msg::Send>::SharedPtr send_sub_;
-
-  rclcpp::Publisher<std_msgs::msg::Float64>::SharedPtr latency_pub_;
-  rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr marker_pub_;
-
-  std::thread receive_thread_;
+    Serial_Config serial_config_;
+    int fd;
 };
-}  // namespace rm_serial_driver
+} // namespace rm_serial_driver
 
-#endif  // RM_SERIAL_DRIVER__RM_SERIAL_DRIVER_HPP_
+#endif // RM_SERIAL_DRIVER__RM_SERIAL_DRIVER_HPP_

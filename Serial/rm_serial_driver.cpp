@@ -3,32 +3,12 @@
 
 #include "rm_serial_driver.hpp"
 
-// ROS
-// #include <rclcpp/logging.hpp>
-// #include <rclcpp/qos.hpp>
-// #include <rclcpp/utilities.hpp>
-// #include <serial_driver/serial_driver.hpp>
-
-// C++ system
-#include <cstdint>
-#include <functional>
-#include <map>
-#include <memory>
-#include <string>
-#include <vector>
-
-#include "rm_serial_driver/crc.hpp"
-#include "rm_serial_driver/packet.hpp"
-
-template <class T> auto declare_parameter(std::string s, T t) -> T
-{
-    std::cout << s << std::endl;
-    return t;
-}
+auto idntifier_green = fmt::format(fg(fmt::color::green) | fmt::emphasis::bold, "uart_serial");
+auto idntifier_red = fmt::format(fg(fmt::color::red) | fmt::emphasis::bold, "uart_serial");
 
 namespace rm_serial_driver
 {
-RMSerialDriver::RMSerialDriver(const std::string &serial_port, const uint32_t &baud_rate)
+RMSerialDriver::RMSerialDriver(std::string _serial_config)
 {
     // 创建并打开 CSV 文件
     csv_file_ = std::ofstream("data.csv", std::ios::app);
@@ -39,41 +19,13 @@ RMSerialDriver::RMSerialDriver(const std::string &serial_port, const uint32_t &b
         // 处理打开文件失败的情况
     }
 
-    std::cout << "Start RMSerialDriver!" << std::endl;
+    cv::FileStorage fs_serial(_serial_config, cv::FileStorage::READ);
 
-    getParams();
+    fs_serial["PREFERRED_DEVICE"] >> serial_config_.preferred_device;
+    fs_serial["SET_BAUDRATE"] >> serial_config_.set_baudrate;
+    fs_serial["SHOW_SERIAL_INFORMATION"] >> serial_config_.show_serial_information;
 
-    // Create Publisher
-    timestamp_offset_ = declare_parameter("timestamp_offset", 0.0);
-    // joint_state_pub_ =this->create_publisher<sensor_msgs::msg::JointState>("/joint_states", rclcpp::QoS(rclcpp::KeepLast(1)));
-    // latency_pub_ = this->create_publisher<std_msgs::msg::Float64>("/latency", 10);
-    // marker_pub_ = this->create_publisher<visualization_msgs::msg::Marker>("/aiming_point", 10);
-    // velocity_pub_ = this->create_publisher<auto_aim_interfaces::msg::Velocity>("/current_velocity", 10);
-
-    // try
-    // {
-    //     serial_driver_->init_port(device_name_, *device_config_);
-    //     if (!serial_driver_->port()->is_open())
-    //     {
-    //         serial_driver_->port()->open();
-    //         receive_thread_ = std::thread(&RMSerialDriver::receiveData, this);
-    //     }
-    // }
-    // catch (const std::exception &ex)
-    // {
-    //     RCLCPP_ERROR(get_logger(), "Error creating serial port: %s - %s", device_name_.c_str(), ex.what());
-    //     throw ex;
-    // }
-
-    // Create Subscription
-    // send_sub_ = this->create_subscription<auto_aim_interfaces::msg::Send>(
-    //     "/tracker/send", rclcpp::SensorDataQoS(), std::bind(&RMSerialDriver::sendData, this, std::placeholders::_1));
-
-    // target_sub_ = this->create_subscription<auto_aim_interfaces::msg::Target>(
-    //   "/tracker/target", rclcpp::SensorDataQoS(),
-    //   std::bind(&RMSerialDriver::sendData, this, std::placeholders::_1));
-
-    
+    RMSerialInit();
 }
 
 RMSerialDriver::~RMSerialDriver()
@@ -84,20 +36,59 @@ RMSerialDriver::~RMSerialDriver()
     {
         csv_file_.close();
     }
-    if (receive_thread_.joinable())
+}
+
+void RMSerialDriver::RMSerialInit()
+{
+    const char *DeviceName[] = {serial_config_.preferred_device.c_str(), "/dev/ttyUSB0", "/dev/ttyUSB2",
+                                "/dev/ttyUSB3"};
+
+    struct termios newstate;
+    bzero(&newstate, sizeof(newstate));
+
+    for (size_t i = 0; i != sizeof(DeviceName) / sizeof(char *); ++i)
     {
-        receive_thread_.join();
+        fd = open(DeviceName[i], O_RDWR | O_NONBLOCK | O_NOCTTY | O_NDELAY);
+        if (fd == -1)
+        {
+            std::cout << "Open serial device failed" << std::endl;
+            // fmt::print("[{}] Open serial device failed: {}\n", idntifier_red, DeviceName[i]);
+        }
+        else
+        {
+            std::cout << "Open serial device success" << std::endl;
+            fmt::print("[{}] Open serial device success: {}\n", idntifier_green, DeviceName[i]);
+
+            break;
+        }
+    }
+    switch (serial_config_.set_baudrate)
+    {
+    case 1:
+        cfsetospeed(&newstate, B115200);
+        cfsetispeed(&newstate, B115200);
+        break;
+    case 10:
+        cfsetospeed(&newstate, B921600);
+        cfsetispeed(&newstate, B921600);
+        break;
+    default:
+        cfsetospeed(&newstate, B115200);
+        cfsetispeed(&newstate, B115200);
+        break;
     }
 
-    if (serial_driver_->port()->is_open())
-    {
-        serial_driver_->port()->close();
-    }
+    newstate.c_cflag |= CLOCAL | CREAD;
+    newstate.c_cflag &= ~CSIZE;
+    newstate.c_cflag &= ~CSTOPB;
+    newstate.c_cflag |= CS8;
+    newstate.c_cflag &= ~PARENB;
 
-    if (owned_ctx_)
-    {
-        owned_ctx_->waitForExit();
-    }
+    newstate.c_cc[VTIME] = 0;
+    newstate.c_cc[VMIN] = 0;
+
+    tcflush(fd, TCIOFLUSH);
+    tcsetattr(fd, TCSANOW, &newstate);
 }
 
 void RMSerialDriver::receiveData()
@@ -139,16 +130,16 @@ void RMSerialDriver::receiveData()
                     // std::cout << "xyz: (" << packet.aim_x << ", " << packet.aim_y << ", " << packet.aim_z << ")" <<
                     // std::endl; std::cout << "pitch: " << packet.pitch << "yaw: " << packet.yaw << std::endl;
 
-                    sensor_msgs::msg::JointState joint_state;
-                    timestamp_offset_ = this->get_parameter("timestamp_offset").as_double();
-                    joint_state.header.stamp = this->now() + rclcpp::Duration::from_seconds(timestamp_offset_);
-                    joint_state.name.push_back("pitch_joint");
-                    joint_state.name.push_back("yaw_joint");
-                    joint_state.position.push_back(packet.pitch);
-                    joint_state.position.push_back(packet.yaw);
-                    joint_state_pub_->publish(joint_state);
+                    // sensor_msgs::msg::JointState joint_state;
+                    // timestamp_offset_ = this->timestamp_offset_;
+                    // joint_state.header.stamp = this->now() + rclcpp::Duration::from_seconds(timestamp_offset_);
+                    // joint_state.name.push_back("pitch_joint");
+                    // joint_state.name.push_back("yaw_joint");
+                    // joint_state.position.push_back(packet.pitch);
+                    // joint_state.position.push_back(packet.yaw);
+                    // joint_state_pub_->publish(joint_state);
 
-                    auto_aim_interfaces::msg::Velocity current_velocity;
+                    msg::Velocity current_velocity;
                     timestamp_offset_ = this->get_parameter("timestamp_offset").as_double();
                     current_velocity.header.stamp = this->now() + rclcpp::Duration::from_seconds(timestamp_offset_);
                     current_velocity.velocity = packet.current_v;
@@ -181,7 +172,7 @@ void RMSerialDriver::receiveData()
     }
 }
 
-void RMSerialDriver::sendData(const auto_aim_interfaces::msg::Send::SharedPtr msg)
+void RMSerialDriver::sendData(const msg::Send& msg)
 {
     const static std::map<std::string, uint8_t> id_unit8_map{
         {"", 0}, {"outpost", 0}, {"1", 1}, {"1", 1}, {"2", 2}, {"3", 3}, {"4", 4}, {"5", 5}, {"guard", 6}, {"base", 7}};
@@ -345,56 +336,6 @@ void RMSerialDriver::getParams()
     device_config_ = std::make_unique<drivers::serial_driver::SerialPortConfig>(baud_rate, fc, pt, sb);
 }
 
-void RMSerialDriver::reopenPort()
-{
-    RCLCPP_WARN(get_logger(), "Attempting to reopen port");
-    try
-    {
-        if (serial_driver_->port()->is_open())
-        {
-            serial_driver_->port()->close();
-        }
-        serial_driver_->port()->open();
-        RCLCPP_INFO(get_logger(), "Successfully reopened port");
-    }
-    catch (const std::exception &ex)
-    {
-        RCLCPP_ERROR(get_logger(), "Error while reopening port: %s", ex.what());
-        if (rclcpp::ok())
-        {
-            rclcpp::sleep_for(std::chrono::seconds(1));
-            reopenPort();
-        }
-    }
-}
-
-void RMSerialDriver::setParam(const rclcpp::Parameter &param)
-{
-    if (!detector_param_client_->service_is_ready())
-    {
-        RCLCPP_WARN(get_logger(), "Service not ready, skipping parameter set");
-        return;
-    }
-
-    if (!set_param_future_.valid() || set_param_future_.wait_for(std::chrono::seconds(0)) == std::future_status::ready)
-    {
-        RCLCPP_INFO(get_logger(), "Setting detect_color to %ld...", param.as_int());
-        set_param_future_ =
-            detector_param_client_->set_parameters({param}, [this, param](const ResultFuturePtr &results) {
-                for (const auto &result : results.get())
-                {
-                    if (!result.successful)
-                    {
-                        RCLCPP_ERROR(get_logger(), "Failed to set parameter: %s", result.reason.c_str());
-                        return;
-                    }
-                }
-                RCLCPP_INFO(get_logger(), "Successfully set detect_color to %ld!", param.as_int());
-                initial_set_param_ = true;
-            });
-    }
-}
-
 void RMSerialDriver::resetTracker()
 {
     if (!reset_tracker_client_->service_is_ready())
@@ -405,7 +346,7 @@ void RMSerialDriver::resetTracker()
 
     auto request = std::make_shared<std_srvs::srv::Trigger::Request>();
     reset_tracker_client_->async_send_request(request);
-    RCLCPP_INFO(get_logger(), "Reset tracker!");
+    std::cout << "Reset tracker!" << std::endl;
 }
 
 } // namespace rm_serial_driver
@@ -415,4 +356,4 @@ void RMSerialDriver::resetTracker()
 // Register the component with class_loader.
 // This acts as a sort of entry point, allowing the component to be discoverable when its library
 // is being loaded into a running process.
-RCLCPP_COMPONENTS_REGISTER_NODE(rm_serial_driver::RMSerialDriver)
+// RCLCPP_COMPONENTS_REGISTER_NODE(rm_serial_driver::RMSerialDriver)
