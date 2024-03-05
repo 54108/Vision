@@ -1,0 +1,218 @@
+#ifndef SERIAL_HPP
+#define SERIAL_HPP
+#include <string>
+#include <iostream>
+#include <fcntl.h>
+#include <termios.h>
+#include <unistd.h>
+
+#include <fmt/core.h>
+#include <fmt/color.h>
+
+#include <opencv2/opencv.hpp>
+
+
+// buff长度
+enum BufferLength 
+{    
+    //发送信息数据长度
+    // The send length of the array after append CRC auth code
+    SEND_BUFF_LENGTH = 13,
+
+    //接收信息数据长度
+    // The recieve length of the array obtained after decoding
+    //RECEIVE_BUFF_LENGTH   = 22,
+    
+    //CRC校验数据长度
+    // The send length of the array for CRC auth code code calculating
+    CRC_BUFF_LENGTH   = 11,
+};
+
+// 串口参数
+struct Serial_Config 
+{
+  std::string preferred_device        = "/dev/ttyUSB0";
+  int         set_baudrate            = 0;
+  int         show_serial_information = 0;
+};
+
+
+// 串口发送信息
+// Serial port message sending structure
+struct Send_Data
+{
+  int is_find_target;
+
+  int yaw_symbol;
+  int pitch_symbol;
+  int distance;
+
+  float yaw_angle;
+  float pitch_angle;
+  Send_Data()
+  {
+    yaw_symbol=0;
+    pitch_symbol=0;
+    distance=0;
+    is_find_target=0;
+    yaw_angle=0.f;
+    pitch_angle=0.f;
+  }
+};
+
+union Fp32
+{
+    uint32_t u;
+    float f;
+};
+
+
+
+class Serial
+{
+public:
+    Serial()=default;
+    explicit Serial(std::string _serial_config);
+
+    ~Serial();
+
+    void serialInit(); 
+
+    void sendData(const int isFindTarget,
+                     const float yaw,
+                     const float pitch,
+                     const int distance);
+
+    void getSendData(const int isFindTarget,
+                     const float yaw,
+                     const float pitch,
+                     const int distance);
+
+    void setSendBuffer(const uint8_t& CRC);
+
+    void setCrcBuffer();
+
+    inline uint8_t checksumCRC(unsigned char* buff, uint16_t length);
+
+      /**
+   * @brief 返回高八位数据
+   * 
+   * @param Byte 
+   * @return unsigned char 
+   */
+  inline unsigned char returnHighBit(const int& Byte) 
+  {
+    exchangebyte_ = (Byte >> 8) & 0xff;
+
+    return exchangebyte_;
+  }
+
+    /**
+   * @brief 返回低八位数据
+   * 
+   * @param Byte 
+   * @return unsigned char 
+   */
+  inline unsigned char returnLowBit(const int& Byte) {
+    exchangebyte_ = Byte & 0xff;
+
+    return exchangebyte_;
+  }
+
+    /**
+   * @brief 合并数据
+   * 
+   * @param highbit   高八位数据
+   * @param lowbit    低八位数据
+   * @return int16_t  合并后数据
+   */
+  inline int16_t mergeIntoBytes(const unsigned char& highbit,
+                                const unsigned char& lowbit) {
+    exchangebit_ = (highbit << 8) | lowbit;
+
+    return exchangebit_;
+  }
+
+  inline uint16_t float_cov_uint16(float value)
+{
+
+    const Fp32 f32infty = { 255U << 23 };
+    const Fp32 f16infty = { 31U << 23 };
+    const Fp32 magic = { 15U << 23 };
+    const uint32_t sign_mask = 0x80000000U;
+    const uint32_t round_mask = ~0xFFFU;
+
+    Fp32 in;
+    uint16_t out;
+
+    in.f = value;
+
+    uint32_t sign = in.u & sign_mask;
+    in.u ^= sign;
+
+    if (in.u >= f32infty.u) /* Inf or NaN (all exponent bits set) */
+    {
+        /* NaN->sNaN and Inf->Inf */
+        out = (in.u > f32infty.u) ? 0x7FFFU : 0x7C00U;
+    }
+    else /* (De)normalized number or zero */
+    {
+        in.u &= round_mask;
+        in.f *= magic.f;
+        in.u -= round_mask;
+        if (in.u > f16infty.u)
+        {
+            in.u = f16infty.u; /* Clamp to signed infinity if overflowed */
+        }
+
+        out = uint16_t(in.u >> 13); /* Take the bits! */
+    }
+
+    out = uint16_t(out | (sign >> 16));
+
+    return out;
+}
+
+
+private:
+int           fd;
+unsigned char exchangebyte_;
+unsigned char exchangebit_;
+int16_t yaw_reduction_;
+int16_t pitch_reduction_;
+int16_t depth_reduction_;
+Serial_Config serial_config_;
+
+ssize_t write_message_;
+
+Send_Data send_data;
+
+unsigned char write_buff_[SEND_BUFF_LENGTH];
+unsigned char crc_buff_[CRC_BUFF_LENGTH];
+
+};
+
+static constexpr unsigned char CRC8_Table[] = 
+{
+  0,   94,  188, 226, 97,  63,  221, 131, 194, 156, 126, 32,  163, 253, 31,
+  65,  157, 195, 33,  127, 252, 162, 64,  30,  95,  1,   227, 189, 62,  96,
+  130, 220, 35,  125, 159, 193, 66,  28,  254, 160, 225, 191, 93,  3,   128,
+  222, 60,  98,  190, 224, 2,   92,  223, 129, 99,  61,  124, 34,  192, 158,
+  29,  67,  161, 255, 70,  24,  250, 164, 39,  121, 155, 197, 132, 218, 56,
+  102, 229, 187, 89,  7,   219, 133, 103, 57,  186, 228, 6,   88,  25,  71,
+  165, 251, 120, 38,  196, 154, 101, 59,  217, 135, 4,   90,  184, 230, 167,
+  249, 27,  69,  198, 152, 122, 36,  248, 166, 68,  26,  153, 199, 37,  123,
+  58,  100, 134, 216, 91,  5,   231, 185, 140, 210, 48,  110, 237, 179, 81,
+  15,  78,  16,  242, 172, 47,  113, 147, 205, 17,  79,  173, 243, 112, 46,
+  204, 146, 211, 141, 111, 49,  178, 236, 14,  80,  175, 241, 19,  77,  206,
+  144, 114, 44,  109, 51,  209, 143, 12,  82,  176, 238, 50,  108, 142, 208,
+  83,  13,  239, 177, 240, 174, 76,  18,  145, 207, 45,  115, 202, 148, 118,
+  40,  171, 245, 23,  73,  8,   86,  180, 234, 105, 55,  213, 139, 87,  9,
+  235, 181, 54,  104, 138, 212, 149, 203, 41,  119, 244, 170, 72,  22,  233,
+  183, 85,  11,  136, 214, 52,  106, 43,  117, 151, 201, 74,  20,  246, 168,
+  116, 42,  200, 150, 21,  75,  169, 247, 182, 232, 10,  84,  215, 137, 107,
+  53
+};
+
+
+#endif

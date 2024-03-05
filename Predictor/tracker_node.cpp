@@ -146,7 +146,10 @@ void ArmorTrackerNode::armorsCallback(const std::shared_ptr<msg::Armors> armors_
     // Tranform armor position from image frame to world coordinate
     for (auto &armor : armors_msg->armors)
     {
-        
+        msg::PoseStamped ps;
+        ps.pose.orientation = armor.pose.orientation;
+        ps.pose.position = armor.pose.position;
+        // armor.pose = tf2_buffer_->transform(ps, target_frame_).pose;
     }
 
     // Filter abnormal armors
