@@ -10,9 +10,9 @@ Serial::Serial(std::string _serial_config)
 {
     cv::FileStorage fs_serial(_serial_config, cv::FileStorage::READ);
     
-    fs_serial["PREFERRED_DEVICE"]        >> serial_config_.preferred_device;
-    fs_serial["SET_BAUDRATE"]            >> serial_config_.set_baudrate;
-    fs_serial["SHOW_SERIAL_INFORMATION"] >> serial_config_.show_serial_information;
+    fs_serial["PREFERRED_DEVICE"]        >> serial_config.preferred_device;
+    fs_serial["SET_BAUDRATE"]            >> serial_config.set_baudrate;
+    fs_serial["SHOW_SERIAL_INFORMATION"] >> serial_config.show_serial_information;
 
     serialInit();
 }
@@ -28,7 +28,7 @@ Serial::~Serial()
 
 void Serial::serialInit()
 {
-    const char* DeviceName[] = {serial_config_.preferred_device.c_str(), "/dev/ttyUSB0", "/dev/ttyUSB2", "/dev/ttyUSB3"};
+    const char* DeviceName[] = {serial_config.preferred_device.c_str(), "/dev/ttyUSB0", "/dev/ttyUSB2", "/dev/ttyUSB3"};
 
     struct termios newstate;
     bzero(&newstate, sizeof(newstate));
@@ -49,7 +49,7 @@ void Serial::serialInit()
             break;
         }
     }
-    switch (serial_config_.set_baudrate)
+    switch (serial_config.set_baudrate)
     {
         case 1:
             cfsetospeed(&newstate, B115200);
@@ -87,46 +87,46 @@ void Serial::getSendData(const int _isFindTarget,
 
     send_data.is_find_target    = _isFindTarget > 1 ? 1 : _isFindTarget;
     send_data.yaw_symbol   = _yaw >= 0 ? 1 : 0;
-    send_data.yaw_angle    = fabs(_yaw) * 100;
+    send_data.yaw_angle    = static_cast<int>(fabs(_yaw) * 100);
 
-    cout<<"       "<<send_data.yaw_angle<<endl;
+    //cout<<"       "<<send_data.yaw_angle<<endl;
 
     send_data.pitch_symbol = _pitch >= 0 ? 1 : 0;
-    send_data.pitch_angle  = fabs(_pitch) * 100;
-    cout<<"       "<<send_data.pitch_angle<<endl;
+    send_data.pitch_angle  = static_cast<float>(fabs(_pitch) * 100);
+    //cout<<"       "<<send_data.pitch_angle<<endl;
     send_data.distance        = _distance;
 }
 
 void Serial::setSendBuffer(const uint8_t& CRC)
 {
-    write_buff_[0]  = 0x53;
-    write_buff_[1]  = static_cast<unsigned char>(send_data.is_find_target);
-    write_buff_[2] =0;
-    write_buff_[3]  = static_cast<unsigned char>(send_data.yaw_symbol);
-    write_buff_[4]  = returnLowBit(send_data.yaw_angle);
-    write_buff_[5]  = returnHighBit(send_data.yaw_angle);
-    write_buff_[6]  = static_cast<unsigned char>(send_data.pitch_symbol);
-    write_buff_[7]  = returnLowBit(send_data.pitch_angle);
-    write_buff_[8]  = returnHighBit(send_data.pitch_angle);
-    write_buff_[9]  = returnLowBit(send_data.distance);
-    write_buff_[10] = returnHighBit(send_data.distance);
-    write_buff_[11] = CRC & 0xff;
-    write_buff_[12] = 0x45; 
+    write_buff[0]  = 0x53;
+    write_buff[1]  = 1;
+    write_buff[2]  = static_cast<unsigned char>(send_data.is_find_target);
+    write_buff[3]  = static_cast<unsigned char>(send_data.yaw_symbol);
+    write_buff[4]  = returnLowBit(send_data.yaw_angle);
+    write_buff[5]  = returnHighBit(send_data.yaw_angle);
+    write_buff[6]  = static_cast<unsigned char>(send_data.pitch_symbol);
+    write_buff[7]  = returnLowBit(send_data.pitch_angle);
+    write_buff[8]  = returnHighBit(send_data.pitch_angle);
+    write_buff[9]  = returnLowBit(send_data.distance);
+    write_buff[10] = returnHighBit(send_data.distance);
+    write_buff[11] = CRC & 0xff;
+    write_buff[12] = 0x45; 
 }
 
 void Serial::setCrcBuffer()
 {
-    crc_buff_[0]  = 0x53;
-    crc_buff_[1]  = static_cast<unsigned char>(send_data.is_find_target);
-    crc_buff_[2]   =0;
-    crc_buff_[3]  = static_cast<unsigned char>(send_data.yaw_symbol);
-    crc_buff_[4]  = returnLowBit(send_data.yaw_angle);
-    crc_buff_[5]  = returnHighBit(send_data.yaw_angle);
-    crc_buff_[6]  = static_cast<unsigned char>(send_data.pitch_symbol);
-    crc_buff_[7]  = returnLowBit(send_data.pitch_angle);
-    crc_buff_[8]  = returnHighBit(send_data.pitch_angle);
-    crc_buff_[9]  = returnLowBit(send_data.distance);
-    crc_buff_[10] = returnHighBit(send_data.distance);
+    crc_buff[0]  = 0x53;
+    crc_buff[1]  = static_cast<unsigned char>(send_data.is_find_target);
+    crc_buff[2]   =0;
+    crc_buff[3]  = static_cast<unsigned char>(send_data.yaw_symbol);
+    crc_buff[4]  = returnLowBit(send_data.yaw_angle);
+    crc_buff[5]  = returnHighBit(send_data.yaw_angle);
+    crc_buff[6]  = static_cast<unsigned char>(send_data.pitch_symbol);
+    crc_buff[7]  = returnLowBit(send_data.pitch_angle);
+    crc_buff[8]  = returnHighBit(send_data.pitch_angle);
+    crc_buff[9]  = returnLowBit(send_data.distance);
+    crc_buff[10] = returnHighBit(send_data.distance);
   
 }
 
@@ -149,19 +149,20 @@ void Serial::sendData(const int  isFindTarget,
                      pitch,
                      distance);
     setCrcBuffer();
-    uint8_t CRC = checksumCRC(crc_buff_, sizeof(crc_buff_));
+    uint8_t CRC = checksumCRC(crc_buff, sizeof(crc_buff));
     setSendBuffer(CRC);
 
-    write_message_ = write(fd, write_buff_, sizeof(write_buff_));
+    write_message_ = write(fd, write_buff, sizeof(write_buff));
       
-    yaw_reduction_   = mergeIntoBytes(write_buff_[5], write_buff_[4]);
-    
-      pitch_reduction_ = mergeIntoBytes(write_buff_[8], write_buff_[7]);
-      depth_reduction_ = mergeIntoBytes(write_buff_[10], write_buff_[9]);
+    yaw_reduction   = mergeIntoBytes(write_buff[5], write_buff[4]);
+
+    pitch_reduction = mergeIntoBytes(write_buff[8], write_buff[7]);
+
+    depth_reduction = mergeIntoBytes(write_buff[10], write_buff[9]);
 
     fmt::print("[{}] writeData() ->", idntifier_green);
     for (size_t i = 0; i != 13; ++i) {
-      fmt::print(" {}", write_buff_[i]);
+      fmt::print(" {}", write_buff[i]);
     }
     fmt::print("\n");
 
@@ -169,17 +170,122 @@ void Serial::sendData(const int  isFindTarget,
       fmt::print("[{}] writeData() ->", idntifier_green);
       for (size_t i = 0; i != 4; ++i) 
       {
-        fmt::print(" {}", write_buff_[i]);
+        fmt::print(" {}", write_buff[i]);
       }
-      fmt::print(" {} {} {} {}", static_cast<float>(yaw_reduction_) / 100, static_cast<int>(write_buff_[6]), static_cast<float>(pitch_reduction_) / 100, static_cast<float>(depth_reduction_));
+      fmt::print(" {} {} {} {}", static_cast<float>(yaw_reduction)/100, static_cast<int>(write_buff[6]), static_cast<float>(pitch_reduction) / 100, static_cast<float>(depth_reduction));
       for (size_t i = 10; i != 13; ++i) 
       {
-        fmt::print(" {}", write_buff_[i]);
+        fmt::print(" {}", write_buff[i]);
       }
       fmt::print("\n");
 
-      yaw_reduction_   = 0x0000;
-      pitch_reduction_ = 0x0000;
-      depth_reduction_ = 0x0000;
+      yaw_reduction   = 0x0000;
+      pitch_reduction = 0x0000;
+      depth_reduction = 0x0000;
 }
 
+
+void Serial::receiveData()
+{
+    memset(receive_buff, '0', RECEIVE_BUFF_LENGTH * 2);
+  
+    read_message_ = read(fd, receive_buff_temp, sizeof(receive_buff_temp));
+
+    for (size_t i = 0; i != sizeof(receive_buff_temp); ++i) 
+    {
+        if (receive_buff_temp[i] == 'S' && receive_buff_temp[i + sizeof(receive_buff) - 1] == 'E') 
+        {
+            if (serial_config.show_serial_information == 1) 
+            {
+                fmt::print("[{}] receiveData() ->", idntifier_green);
+
+                for (size_t j = 0; j != sizeof(receive_buff); ++j) 
+                {
+                    receive_buff[j] = receive_buff_temp[i + j];
+
+                    fmt::print(" {:d}", receive_buff[j]);
+                }
+
+                fmt::print("\n");
+            } 
+            else 
+            {
+                for (size_t j = 0; j != sizeof(receive_buff); ++j) 
+                {
+                    receive_buff[j] = receive_buff_temp[i + j];
+                }
+            }
+
+      break;
+        }
+    }
+
+  tcflush(fd, TCIFLUSH);
+}
+
+bool Serial::isEmpty() {
+  if (receive_buff[0] != '0' || receive_buff[RECEIVE_BUFF_LENGTH - 1] != '0') {
+    return false;
+  } else {
+    return true;
+  }
+}
+
+void Serial::getReceiveData(ReceiveData &receive_data)
+{
+  receiveData();
+
+  if (isEmpty()) 
+  {
+    return;
+  } 
+  
+  else 
+  {
+    last_receive_data = receive_data;
+  }
+
+
+  switch (receive_buff[1]) 
+  {
+    case 0:
+      receive_data.my_color = 0;
+      break;
+    case 1:
+      receive_data.my_color = 1;
+      break;
+    default:
+      receive_data.my_color = 2;
+      break;
+  }
+
+  switch (receive_buff[2]) 
+  {
+    case 0:
+      receive_data.detect_mode = 0;
+      break;
+    case 1:
+      receive_data.detect_mode = 1;
+      break;
+    default:
+      receive_data.detect_mode = 0;
+      break;
+  }
+
+  receive_data.bullet_speed=receive_buff[3];
+
+  // q0=mergeIntoBytes(receive_buff[5],receive_buff[4]);
+
+  // q1=mergeIntoBytes(receive_buff[7],receive_buff[6]);
+
+  // q2=mergeIntoBytes(receive_buff[9],receive_buff[8]);
+
+  // q3=mergeIntoBytes(receive_buff[11],receive_buff[10]);
+
+  receive_data.q=Eigen::Quaternionf(static_cast<float>(mergeIntoBytes(receive_buff[5],receive_buff[4]))/1000,
+                                    static_cast<float>(mergeIntoBytes(receive_buff[7],receive_buff[6]))/1000,
+                                    static_cast<float>(mergeIntoBytes(receive_buff[9],receive_buff[8]))/1000,
+                                    static_cast<float>(mergeIntoBytes(receive_buff[11],receive_buff[10]))/1000);
+
+
+}
