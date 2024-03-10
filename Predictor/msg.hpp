@@ -2,7 +2,6 @@
 #define MSG_
 #include <Eigen/Eigen>
 #include <Eigen/src/Geometry/Quaternion.h>
-#include <atomic>
 #include <chrono>
 #include <opencv2/core/types.hpp>
 #include <opencv2/opencv.hpp>

@@ -1,3 +1,13 @@
+/**
+ * @file main.cpp
+ * @author 54108
+ * @brief
+ * @version 0.1
+ * @date 2024-02-20
+ *
+ * @copyright Copyright (c) 2024
+ *
+ */
 #include "Camera/MVCamera.hpp"
 #include "Detector/ArmorDetector/ArmorDetector.hpp"
 #include "Detector/OpenVINO2022/types.hpp"
@@ -67,8 +77,8 @@ int main()
 
         std::chrono::system_clock::time_point solvepose = std::chrono::system_clock::now();
 
-        cout << "cmaera:" << (camera - now).count()/1000000 << endl;
-        cout << "detect and solvepose:" << (solvepose - camera).count()/1000000 << endl;
+        // cout << "cmaera:" << (camera - now).count()/1000000 << endl;
+        // cout << "detect and solvepose:" << (solvepose - camera).count()/1000000 << endl;
 
         imshow("output", src_img_);
 
